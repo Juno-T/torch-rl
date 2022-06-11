@@ -66,7 +66,7 @@ class DQN_agent(Agent):
     self.internal_s_t = None
     self.short_memory = NP_deque(maxlen = look_back)
     
-  def train_init(self, rng_key):
+  def train_init(self, rng=None):
     self.replay_model = deepcopy(self.model).to(device)
     self.target_model = deepcopy(self.replay_model).to(device)
     self.optimizer = optim.Adam(self.replay_model.parameters(), lr=self.learning_rate)

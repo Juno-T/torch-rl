@@ -2,6 +2,7 @@ import collections
 from typing import NamedTuple, Any
 
 import numpy as np
+import random
 
 class TimeStep(NamedTuple):
   step_type: int = 0  # is terminal step
@@ -28,7 +29,7 @@ class NP_deque():
     self.reset()
 
   def reset(self, element=None):
-    self._storage = np.array([element]*self.maxlen, dtype=object)
+    self._storage = np.array([element]*self.maxlen, dtype=object if element is None else element.dtype)
     self._head = -1
 
   def push(self, element):
@@ -64,11 +65,23 @@ class ReplayMemory(object):
     self.memory.append(transition)
 
   def sample(self, rng, batch_size):
-    transitions = rng.choice(self.memory, size = batch_size)
-    return self._unroll(transitions)
+    random.seed(rng.integers(1e5))
+    transitions = random.choices(self.memory, k = batch_size) # rigged for np
+    return self._unroll(np.array(transitions, dtype=object))
 
   def _unroll(self, transitions):
     return Transition(*list(map(lambda *ts: np.stack(ts),*transitions)))
 
+  def at(self, index):
+    """
+    support both single and multiple indexing
+    """
+    index = np.asarray(index)
+    return self.memory[index]
+
   def __len__(self):
+    return len(self.memory)
+  
+  @property
+  def size(self):
     return len(self.memory)
