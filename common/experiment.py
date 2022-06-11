@@ -44,28 +44,29 @@ class Trainer:
       observation = self.env.reset(seed=int(rng.integers(1e5)))
       agent.episode_init(observation)
       timestep_t = TimeStep(obsv = observation)
-      agent.remember(None, timestep_t)
+      agent.observe(None, timestep_t, remember = True)
 
       done=False
       acc_reward = 0
       while not done:
         
-        agent.observe(observation)
         action, discount = agent.act(rng)
         
         observation, reward, done, info = self.env.step(action)
-        agent.remember(action, TimeStep(
+        timestep_t = TimeStep(
             int(done),
             observation,
             reward,
             discount
-        ))
+        )
+        agent.observe(action, timestep_t, remember = True)
+        
         acc_reward += reward
       
       episode_summary['train']['reward']=acc_reward
 
       if learn_from_transitions:
-        agent.learn_batch_transitions(rng)
+        agent.learn_batch_transitions(rng, batch_size)
       
       if episode_number%evaluate_every==0:
         test_reward = self.eval(rng, agent, eval_episodes, episode_number)
@@ -80,6 +81,8 @@ class Trainer:
     for ep in range(eval_episodes):
       observation = self.env.reset(seed=int(rng.integers(1e5)))
       agent.episode_init(observation)
+      timestep_t = TimeStep(obsv=observation)
+      agent.observe(None, timestep_t, remember = False)
 
       done=False
       acc_reward = 0
@@ -87,6 +90,13 @@ class Trainer:
         agent.observe(observation)
         action, discount = agent.act(rng)
         observation, reward, done, info = self.env.step(action)
+        timestep_t = TimeStep(
+            int(done),
+            observation,
+            reward,
+            discount
+        )
+        agent.observe(action, timestep_t, remember = False)
         acc_reward += reward
 
     return acc_reward

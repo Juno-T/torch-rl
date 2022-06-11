@@ -14,6 +14,7 @@ class Transition(NamedTuple):
   a_tm1: Any
   s_t: Any
   r_t: float = 0.0
+  discount_t: float = 0.9
   trace: Any = None # For future implementation of traces?
   priority: float =1 # For future priority sampling implementation
 
@@ -56,14 +57,18 @@ class NP_deque():
 class ReplayMemory(object):
 
   def __init__(self, capacity):
-    self.memory = deque([],maxlen=capacity)
+    self.memory = collections.deque([],maxlen=capacity)
 
   def push(self, transition):
     """Save a transition"""
     self.memory.append(transition)
 
   def sample(self, rng, batch_size):
-    return rng.choice(self.memory, size = batch_size)
+    transitions = rng.choice(self.memory, size = batch_size)
+    return self._unroll(transitions)
+
+  def _unroll(self, transitions):
+    return Transition(*list(map(lambda *ts: np.stack(ts),*transitions)))
 
   def __len__(self):
     return len(self.memory)

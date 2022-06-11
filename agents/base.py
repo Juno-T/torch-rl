@@ -23,10 +23,7 @@ class Agent(ABC):
   def eval_act(self):
     return self.act(observation)
 
-  def observe(self, observation):
-    raise("Not implemented")
-  
-  def remember(self, action, timestep):
+  def observe(self, action, observation, remember=False):
     raise("Not implemented")
 
   def get_stats(self):
@@ -35,7 +32,7 @@ class Agent(ABC):
   def learn_one_ep(self, episode):
     raise("Not implemented")
 
-  def learn_batch_transitions(self, transitions):
+  def learn_batch_transitions(self, batch_size):
     raise("Not implemented")
 
 class RandomAgent(Agent):
@@ -57,10 +54,7 @@ class RandomAgent(Agent):
     rand_action = rng.integers(0, self.action_space.n)
     return rand_action, self.discount
   
-  def observe(self, observation):
-    pass
-  
-  def remember(self, action, timestep):
+  def observe(self, action, observation, remember=False):
     pass
 
   def learn_one_ep(self, episode):
@@ -69,5 +63,5 @@ class RandomAgent(Agent):
   def get_stats(self):
     pass
 
-  def learn_batch_transitions(self, transitions):
+  def learn_batch_transitions(self, rng, batch_size):
     pass
