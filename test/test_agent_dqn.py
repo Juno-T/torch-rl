@@ -66,7 +66,7 @@ class TestReproducibility(unittest.TestCase):
       self.agent1.episode_count == self.agent2.episode_count,
     ]))
 
-  def test_action(self):
+  def test_action_and_memory(self):
     self.agent1.train_init(default_rng(42))
     self.agent2.train_init(default_rng(42))
     is_eq = param_is_equal(self.agent1.replay_model, self.agent2.replay_model)
@@ -94,6 +94,8 @@ class TestReproducibility(unittest.TestCase):
       )
       self.agent1.observe(action1, timestep_t, remember = True)
       self.agent2.observe(action2, timestep_t, remember = True)
+      self.assertTrue(np.array_equal(self.agent1.short_memory._storage, 
+                                      self.agent2.short_memory._storage))
 
 
 if __name__ == '__main__':

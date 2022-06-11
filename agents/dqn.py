@@ -1,9 +1,10 @@
 import torch
 from torch import nn, optim
 from copy import deepcopy
+import numpy as np
 
 from agents.base import Agent
-from common.memory import ReplayMemory, Transition
+from common.memory import ReplayMemory, Transition, NP_deque
 from common.value_prediction import v_q_learning_target
 
 
@@ -63,8 +64,8 @@ class DQN_agent(Agent):
     self.criterion = nn.SmoothL1Loss()
     self.episode_count = 0
     self.internal_s_t = None
+    self.short_memory = NP_deque(maxlen = look_back)
     
-
   def train_init(self, rng_key):
     self.replay_model = deepcopy(self.model).to(device)
     self.target_model = deepcopy(self.replay_model).to(device)
@@ -74,11 +75,11 @@ class DQN_agent(Agent):
 
   def episode_init(self, initial_observation):
     self.episode_count+=1
-    self.internal_s_t = None 
+    self.internal_s_t = None
+    self.short_memory.reset(element = np.zeros_like(initial_observation))
     if self.episode_count%self.delay_update==0:
       self.target_model.load_state_dict(self.replay_model.state_dict())
     
-
   def act(self, rng):
     r = rng.uniform()
     if r<self.epsilon:
@@ -91,7 +92,7 @@ class DQN_agent(Agent):
   def observe(self, action, timestep_t, remember=False):
     internal_s_tm1 = self.internal_s_t
 
-    self.internal_s_t = timestep_t.obsv # TODO:process this
+    self.internal_s_t = self._process_observation(timestep_t.obsv) # TODO:process this
     if remember and internal_s_tm1 is not None: # Not the first observation
       self.memory.push(Transition(
         s_tm1=internal_s_tm1,
@@ -129,5 +130,10 @@ class DQN_agent(Agent):
     #     param.grad.data.clamp_(-1, 1)
     optimizer.step()
 
+  def _process_observation(self, observation):
+    self.short_memory.push(observation)
+    p = self.short_memory.get_all_ordered()
+    # return np.vstack(p) # squash first two dim
+    return np.vstack(p).reshape((-1,*p.shape[2:])) # faster
 
 
