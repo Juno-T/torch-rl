@@ -31,7 +31,7 @@ class NP_deque():
     self._storage = np.array([element]*self.maxlen, dtype=object)
     self._head = -1
 
-  def add(self, element):
+  def push(self, element):
     self._head+=1
     self._storage[self._head%self.maxlen] = element
 

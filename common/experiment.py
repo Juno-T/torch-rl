@@ -49,9 +49,7 @@ class Trainer:
       done=False
       acc_reward = 0
       while not done:
-        
         action, discount = agent.act(rng)
-        
         observation, reward, done, info = self.env.step(action)
         timestep_t = TimeStep(
             int(done),
@@ -60,7 +58,6 @@ class Trainer:
             discount
         )
         agent.observe(action, timestep_t, remember = True)
-        
         acc_reward += reward
       
       episode_summary['train']['reward']=acc_reward
@@ -87,7 +84,6 @@ class Trainer:
       done=False
       acc_reward = 0
       while not done:
-        agent.observe(observation)
         action, discount = agent.act(rng)
         observation, reward, done, info = self.env.step(action)
         timestep_t = TimeStep(
