@@ -15,7 +15,9 @@ class Trainer:
     Interaction between agent and environment
   """
 
-  def __init__(self, env, onEpisodeSummary = lambda step, data: None):
+  def __init__(self, 
+                env, 
+                onEpisodeSummary = (lambda step, data: None)):
     self.env = env
     self.trained_ep = 0
     self.onEpisodeSummary = onEpisodeSummary
@@ -48,6 +50,7 @@ class Trainer:
 
       done=False
       acc_reward = 0
+      length = 0
       while not done:
         action, discount = agent.act(rng)
         observation, reward, done, info = self.env.step(action)
@@ -59,15 +62,16 @@ class Trainer:
         )
         agent.observe(action, timestep_t, remember = True)
         acc_reward += reward
+        length+=1
       
-      episode_summary['train']['reward']=acc_reward
-
       if learn_from_transitions:
         agent.learn_batch_transitions(rng, batch_size)
       
       if episode_number%evaluate_every==0:
-        test_reward = self.eval(rng, agent, eval_episodes, episode_number)
-        episode_summary['val']['reward'] = test_reward
+        val_summary = self.eval(rng, agent, eval_episodes, episode_number)
+        episode_summary['val'] = val_summary
+      episode_summary['train']['reward']=acc_reward
+      episode_summary['train']['ep_length']=length
       episode_summary['agent']=agent.get_stats()
 
       self.onEpisodeSummary(episode_number, episode_summary)
@@ -81,8 +85,10 @@ class Trainer:
       timestep_t = TimeStep(obsv=observation)
       agent.observe(None, timestep_t, remember = False)
 
+      summary={}
       done=False
       acc_reward = 0
+      length = 0
       while not done:
         action, discount = agent.act(rng)
         observation, reward, done, info = self.env.step(action)
@@ -94,5 +100,8 @@ class Trainer:
         )
         agent.observe(action, timestep_t, remember = False)
         acc_reward += reward
+        length+=1
+      summary['reward']=acc_reward
+      summary['ep_length']=length
 
-    return acc_reward
+    return summary

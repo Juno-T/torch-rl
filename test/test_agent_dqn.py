@@ -163,6 +163,8 @@ class TestFunctionality(unittest.TestCase):
     # print(self.cp_agent.memory.sample(TestFunctionality.rng, 1))
     self.assertTrue(self.cp_agent.memory.sample(TestFunctionality.rng, 10).s_tm1.shape==(10, self.look_back*2, 3))
 
+    # test multiple episode
+
 
 if __name__ == '__main__':
   unittest.main()
