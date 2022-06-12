@@ -1,5 +1,6 @@
 import torch
 from torch import nn, optim
+import torch.nn.functional as F
 from copy import deepcopy
 import numpy as np
 
@@ -20,8 +21,8 @@ class DQN_CNN(nn.Module):
 
     def conv2d_size_out(size, kernel_size = 5, stride = 2):
         return (size - (kernel_size - 1) - 1) // stride  + 1
-    convw = conv2d_size_out(conv2d_size_out(conv2d_size_out(w, 8, 4), 4, 2))
-    convh = conv2d_size_out(conv2d_size_out(conv2d_size_out(h, 8, 4), 4, 2))
+    convw = conv2d_size_out(conv2d_size_out(w, 8, 4), 4, 2)
+    convh = conv2d_size_out(conv2d_size_out(h, 8, 4), 4, 2)
     linear_input_size = convw * convh * 32
     self.head = nn.Sequential(
       nn.Linear(linear_input_size, 256),
@@ -65,16 +66,18 @@ class DQN_agent(Agent):
     self.episode_count = 0
     self.internal_s_t = None
     self.short_memory = NP_deque(maxlen = look_back)
+    self.recent_loss=0
     
   def train_init(self, rng=None):
     self.replay_model = deepcopy(self.model).to(device)
     self.target_model = deepcopy(self.replay_model).to(device)
     self.optimizer = optim.Adam(self.replay_model.parameters(), lr=self.learning_rate)
     self.episode_count = 0
-    self.epsilon = self.init_epsilon
+    self.epsilon = self.init_epsilon/self.eps_decay_rate # offset first episode
 
   def episode_init(self, initial_observation):
     self.episode_count+=1
+    self.epsilon *= self.eps_decay_rate
     self.internal_s_t = None
     self.short_memory.reset(element = np.zeros_like(initial_observation))
     if self.episode_count%self.delay_update==0:
@@ -86,7 +89,8 @@ class DQN_agent(Agent):
       return int(rng.integers(self.action_space.n)), self.discount
     
     with torch.no_grad():
-      q_t = self.replay_model(torch.tensor(self.internal_s_t).to(device))
+      self.replay_model.eval()
+      q_t = self.replay_model(torch.tensor(self.internal_s_t).float().unsqueeze(0).to(device))
     return int(q_t.max(1).indices[0]), self.discount
   
   def observe(self, action, timestep_t, remember=False):
@@ -106,34 +110,37 @@ class DQN_agent(Agent):
     pass
 
   def get_stats(self):
-    pass
+    return {
+      'epsilon': self.epsilon,
+      'loss': self.recent_loss
+    }
 
   def learn_batch_transitions(self, rng, batch_size):
+    self.replay_model.train()
     transitions = self.memory.sample(rng, batch_size)
-    s_tm1 = torch.tensor(transitions.s_tm1).to(device)
-    a_tm1 = torch.tensor(transitions.a_tm1).to(device)
-    s_t = torch.tensor(transitions.s_t).to(device)
-    r_t = torch.tensor(transitions.r_t).to(device)
-    discount_t = torch.tensor(transitions.discount_t).to(device)
+    s_tm1 = torch.tensor(transitions.s_tm1).float().to(device)
+    a_tm1 = torch.tensor(transitions.a_tm1).type(torch.int64).to(device)
+    s_t = torch.tensor(transitions.s_t).float().to(device)
+    r_t = torch.tensor(transitions.r_t).float().to(device)
+    discount_t = torch.tensor(transitions.discount_t).float().to(device)
 
-    prediction = self.replay_model(s_tm1).gather(0, a_tm1.unsqueeze(0))
+    prediction = self.replay_model(s_tm1).gather(dim=1, index=a_tm1.unsqueeze(0))
 
     with torch.no_grad():
       q_t = self.target_model(s_t)
     targets = v_q_learning_target(r_t, q_t, discount_t)
     loss = self.criterion(prediction, targets)
+    self.recent_loss= loss.item()
 
-
-    optimizer.zero_grad()
+    self.optimizer.zero_grad()
     loss.backward()
     # for param in policy_net.parameters():
     #     param.grad.data.clamp_(-1, 1)
-    optimizer.step()
+    self.optimizer.step()
 
   def _process_observation(self, observation):
     self.short_memory.push(observation)
     p = self.short_memory.get_all_ordered()
     # return np.vstack(p) # squash first two dim
     return np.vstack(p).reshape((-1,*p.shape[2:])) # faster
-
 
