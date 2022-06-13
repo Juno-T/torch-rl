@@ -12,9 +12,9 @@ from common.value_prediction import v_q_learning_target
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class DQN_CNN(nn.Module):
-  def __init__(self, h, w, outputs):
+  def __init__(self, h, w, in_channels, outputs):
     super(DQN_CNN, self).__init__()
-    self.conv1 = nn.Conv2d(1, 16, kernel_size=8, stride=4)
+    self.conv1 = nn.Conv2d(in_channels, 16, kernel_size=8, stride=4)
     self.bn1 = nn.BatchNorm2d(16)
     self.conv2 = nn.Conv2d(16, 32, kernel_size=4, stride=2)
     self.bn2 = nn.BatchNorm2d(32)
@@ -48,7 +48,7 @@ class MLP(nn.Module):
     return self.head(x)
 
 class DQN_agent(Agent):
-  def __init__(self, env, model, epsilon, memory=None, look_back=1, eps_decay_rate=0.99, discount=0.9, learning_rate=0.1, delay_update=10):
+  def __init__(self, env, model, epsilon, memory=None, look_back=1, eps_decay_rate=0.99, discount=0.9, learning_rate=0.1, delay_update=10, grad_clip=None):
     self.env = env
     self.state_space = env.observation_space
     self.action_space = env.action_space
@@ -61,6 +61,7 @@ class DQN_agent(Agent):
     self.discount=discount
     self.learning_rate=learning_rate
     self.delay_update = delay_update
+    self.grad_clip = grad_clip
 
     self.criterion = nn.SmoothL1Loss()
     self.episode_count = 0
@@ -92,6 +93,13 @@ class DQN_agent(Agent):
       self.replay_model.eval()
       q_t = self.replay_model(torch.tensor(self.internal_s_t).float().unsqueeze(0).to(device))
     return int(q_t.max(1).indices[0]), self.discount
+
+  def eval_act(self, rng):
+    with torch.no_grad():
+      self.replay_model.eval()
+      q_t = self.replay_model(torch.tensor(self.internal_s_t).float().unsqueeze(0).to(device))
+    return int(q_t.max(1).indices[0]), self.discount
+
   
   def observe(self, action, timestep_t, remember=False):
     internal_s_tm1 = self.internal_s_t
@@ -134,6 +142,8 @@ class DQN_agent(Agent):
 
     self.optimizer.zero_grad()
     loss.backward()
+    if self.grad_clip is not None:
+      nn.utils.clip_grad_norm_(self.replay_model.parameters(), max_norm=self.grad_clip)
     # for param in policy_net.parameters():
     #     param.grad.data.clamp_(-1, 1)
     self.optimizer.step()
