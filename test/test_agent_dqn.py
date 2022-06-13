@@ -165,6 +165,14 @@ class TestFunctionality(unittest.TestCase):
 
     # test multiple episode
 
+class TestModels(unittest.TestCase):
+  def test_DQN_CNN_forward(self):
+    batch = 2
+    h, w, in_channels, outputs = 84, 84, 4, 10
+    model = DQN_CNN(h, w, in_channels, outputs)
+    X = torch.rand((batch, in_channels, h, w))
+    y = model(X)
+    assert(y.shape == (batch, outputs))
 
 if __name__ == '__main__':
   unittest.main()
