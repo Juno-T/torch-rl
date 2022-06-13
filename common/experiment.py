@@ -90,7 +90,7 @@ class Trainer:
       acc_reward = 0
       length = 0
       while not done:
-        action, discount = agent.act(rng)
+        action, discount = agent.eval_act(rng)
         observation, reward, done, info = self.env.step(action)
         timestep_t = TimeStep(
             int(done),

@@ -36,29 +36,36 @@ def main():
   config = {
     'eps_decay_rate':1-3e-3, 
     'learning_rate': 1e-2,
-    'delay_update': 50
+    'delay_update': 50,
+    'look_back': 4,
+    'memory_size': 10000,
+    'epsilon': 1,
+    'batch_size': 100,
+    'grad_clip': 2.0
   }
   wandb.init(
     entity="yossathorn-t",
-    project="jax-rl_dqn",
-    notes="Test barebones dqn on gym's cartpole",
-    tags=["dqn", "vanilla", "atari"],
+    project="torch-rl_dqn",
+    notes="Train vanilla dqn on atari ALE/BeamRider-v5",
+    tags=["dqn", "vanilla", "atari", "BeamRider"],
     config=config  
   )
   env = prep_env('ALE/BeamRider-v5')
 
-  epsilon = 1
-  model = DQN_CNN(h=84, w=84, outputs=env.action_space.n)
-  look_back = 4
-  memory_size = 1000
+  model = DQN_CNN(h=84, 
+                  w=84, 
+                  in_channels=config['look_back'], 
+                  outputs=env.action_space.n)
 
   agent = DQN_agent(env, 
                     model, 
-                    epsilon, 
-                    memory = ReplayMemory(memory_size),
+                    config['epsilon'], 
+                    memory = ReplayMemory(config['memory_size']),
+                    look_back = config['look_back'],
                     eps_decay_rate=config['eps_decay_rate'], 
                     learning_rate=config['learning_rate'],
-                    delay_update=config['delay_update'])
+                    delay_update=config['delay_update'],
+                    grad_clip=config['grad_clip'])
 
   trainer = experiment.Trainer(env, onEpisodeSummary=onEpisodeSummary)
 
@@ -66,7 +73,7 @@ def main():
   trainer.train(rng, 
                 agent, 
                 train_episodes, 
-                batch_size=100, 
+                batch_size=config['batch_size'], 
                 evaluate_every=2, 
                 eval_episodes=1, 
                 is_continue=False, 
