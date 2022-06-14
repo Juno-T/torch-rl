@@ -63,9 +63,8 @@ class Trainer:
         agent.observe(action, timestep_t, remember = True)
         acc_reward += reward
         length+=1
-      
-      if learn_from_transitions:
-        agent.learn_batch_transitions(rng, batch_size)
+        if learn_from_transitions:
+          agent.learn_batch_transitions(rng, batch_size)
       
       if episode_number%evaluate_every==0:
         val_summary = self.eval(rng, agent, eval_episodes, episode_number)

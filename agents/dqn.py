@@ -79,6 +79,7 @@ class DQN_agent(Agent):
   def episode_init(self, initial_observation):
     self.episode_count+=1
     self.epsilon *= self.eps_decay_rate
+    self.epsilon = max(self.epsilon, 0.1)
     self.internal_s_t = None
     self.short_memory.reset(element = np.zeros_like(initial_observation))
     if self.episode_count%self.delay_update==0:
@@ -89,15 +90,15 @@ class DQN_agent(Agent):
     if r<self.epsilon:
       return int(rng.integers(self.action_space.n)), self.discount
     
-    with torch.no_grad():
-      self.replay_model.eval()
-      q_t = self.replay_model(torch.tensor(self.internal_s_t).float().unsqueeze(0).to(device))
+    # with torch.no_grad():
+    self.replay_model.eval()
+    q_t = self.replay_model(torch.tensor(self.internal_s_t).float().unsqueeze(0).to(device)).detach()
     return int(q_t.max(1).indices[0]), self.discount
 
   def eval_act(self, rng):
-    with torch.no_grad():
-      self.replay_model.eval()
-      q_t = self.replay_model(torch.tensor(self.internal_s_t).float().unsqueeze(0).to(device))
+    # with torch.no_grad():
+    self.replay_model.eval()
+    q_t = self.replay_model(torch.tensor(self.internal_s_t).float().unsqueeze(0).to(device)).detach()
     return int(q_t.max(1).indices[0]), self.discount
 
   
@@ -124,18 +125,20 @@ class DQN_agent(Agent):
     }
 
   def learn_batch_transitions(self, rng, batch_size):
+    if self.memory.size<batch_size:
+      return 0
     self.replay_model.train()
     transitions = self.memory.sample(rng, batch_size)
-    s_tm1 = torch.tensor(transitions.s_tm1).float().to(device)
-    a_tm1 = torch.tensor(transitions.a_tm1).type(torch.int64).to(device)
-    s_t = torch.tensor(transitions.s_t).float().to(device)
-    r_t = torch.tensor(transitions.r_t).float().to(device)
-    discount_t = torch.tensor(transitions.discount_t).float().to(device)
+    s_tm1 = torch.from_numpy(transitions.s_tm1).float().to(device)
+    a_tm1 = torch.from_numpy(transitions.a_tm1).type(torch.int64).to(device)
+    s_t = torch.from_numpy(transitions.s_t).float().to(device)
+    r_t = torch.from_numpy(transitions.r_t).float().to(device)
+    discount_t = torch.from_numpy(transitions.discount_t).float().to(device)
 
-    prediction = self.replay_model(s_tm1).gather(dim=1, index=a_tm1.unsqueeze(0))
+    prediction = self.replay_model(s_tm1).gather(dim=1, index=a_tm1.unsqueeze(0)).squeeze(0)
 
-    with torch.no_grad():
-      q_t = self.target_model(s_t)
+    # with torch.no_grad():
+    q_t = self.target_model(s_t).detach()
     targets = v_q_learning_target(r_t, q_t, discount_t)
     loss = self.criterion(prediction, targets)
     self.recent_loss= loss.item()
@@ -147,6 +150,7 @@ class DQN_agent(Agent):
     # for param in policy_net.parameters():
     #     param.grad.data.clamp_(-1, 1)
     self.optimizer.step()
+    return 0
 
   def _process_observation(self, observation):
     self.short_memory.push(observation)
