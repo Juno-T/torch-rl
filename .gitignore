@@ -2,6 +2,7 @@ log
 wandb
 run.sh
 run_jupyter.sh
+run_array.sh
 results
 
 # Byte-compiled / optimized / DLL files
