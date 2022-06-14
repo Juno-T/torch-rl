@@ -70,6 +70,7 @@ class ReplayMemory(object):
     return self._unroll(np.array(transitions, dtype=object))
 
   def _unroll(self, transitions):
+    # `Transition(*zip(*a))` would be faster but not end up in np
     return Transition(*list(map(lambda *ts: np.stack(ts),*transitions)))
 
   def at(self, index):
