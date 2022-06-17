@@ -47,7 +47,7 @@ class TestReproducibility(unittest.TestCase):
 
   def setUp(self) -> None:
     config = {
-      'eps_decay_rate':1-3e-3, 
+      'eps_decay':100, 
       'learning_rate': .01,
       'delay_update':100
     }
@@ -58,14 +58,14 @@ class TestReproducibility(unittest.TestCase):
                       model, 
                       epsilon, 
                       memory = ReplayMemory(100),
-                      eps_decay_rate=config['eps_decay_rate'], 
+                      eps_decay=config['eps_decay'], 
                       learning_rate=config['learning_rate'],
                       delay_update=config['delay_update'])
     self.agent2 = DQN_agent(TestReproducibility.env, 
                       model, 
                       epsilon, 
                       memory = ReplayMemory(100),
-                      eps_decay_rate=config['eps_decay_rate'], 
+                      eps_decay=config['eps_decay'], 
                       learning_rate=config['learning_rate'],
                       delay_update=config['delay_update'])
     return super().setUp()
@@ -124,7 +124,7 @@ class TestFunctionality(unittest.TestCase):
 
   def setUp(self) -> None:
     config = {
-      'eps_decay_rate':1-3e-3, 
+      'eps_decay':100, 
       'learning_rate': .01,
       'delay_update':100
     }
@@ -137,7 +137,7 @@ class TestFunctionality(unittest.TestCase):
                       epsilon, 
                       memory = ReplayMemory(100),
                       look_back = self.look_back,
-                      eps_decay_rate=config['eps_decay_rate'], 
+                      eps_decay=config['eps_decay'], 
                       learning_rate=config['learning_rate'],
                       delay_update=config['delay_update'])
     return super().setUp()
