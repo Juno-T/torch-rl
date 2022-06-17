@@ -26,7 +26,7 @@ def prep_env(env_name):
 
 # def get_one_hparams(rng):
   # hparams = {
-  #   'eps_decay_rate': 1-5e-3, 
+  #   'eps_decay': 1-5e-3, 
   #   'learning_rate': utils.round_any(10**(rng.random()*3-4), n=2), # [1e-4, 1e-1]
   #   'delay_update': rng.integers(10,100), # [10,100]
   #   'look_back': 4,
@@ -45,7 +45,7 @@ def main(config, trial_number):
     entity="yossathorn-t",
     project="torch-rl_cartpole",
     notes=f"Manual tuning",
-    tags=["dqn", "vanilla", "cartpole"],
+    tags=["dqn", "vanilla", "cartpole", "replicate"],
     config=config
   )
   env = prep_env('CartPole-v1')
@@ -57,14 +57,14 @@ def main(config, trial_number):
                     config['epsilon'], 
                     memory = ReplayMemory(config['memory_size']),
                     look_back = config['look_back'],
-                    eps_decay_rate=config['eps_decay_rate'], 
+                    eps_decay=config['eps_decay'], 
                     learning_rate=config['learning_rate'],
                     delay_update=config['delay_update'],
                     grad_clip=config['grad_clip'])
 
   trainer = experiment.Trainer(env, onEpisodeSummary=onEpisodeSummary)
 
-  train_episodes = 500
+  train_episodes = 5000
   trainer.train(rng, 
                 agent, 
                 train_episodes, 
@@ -84,14 +84,14 @@ if __name__=='__main__':
 
   if trial_number == -1:
     config = {
-      'eps_decay_rate':1-5e-3, 
       'learning_rate': 1e-4,
       'delay_update': 25,
       'look_back': 1,
-      'memory_size': 10000,
+      'memory_size': 1e6,
       'epsilon': 1,
-      'batch_size': 100,
-      'grad_clip': 1
+      'eps_decay':, 
+      'batch_size': 32,
+      'grad_clip': 1e6 # no clip
     }
   else:
     config = get_one_hparams(default_rng(trial_number))

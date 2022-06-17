@@ -80,7 +80,7 @@ class Trainer:
   def eval(self, rng, agent, eval_episodes, episode_number):
     for ep in range(eval_episodes):
       observation = self.env.reset(seed=int(rng.integers(1e5)))
-      agent.episode_init(observation)
+      agent.episode_init(observation, train=False)
       timestep_t = TimeStep(obsv=observation)
       agent.observe(None, timestep_t, remember = False)
 

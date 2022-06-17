@@ -32,11 +32,12 @@ def prep_env(env_name):
 
 def get_one_hparams(rng):
   hparams = {
-    'eps_decay_rate': 1-5e-3, 
+    'eps_decay': 500, 
+    'eps_min': 0.1,
     'learning_rate': utils.round_any(10**(rng.random()*3-4), n=2), # [1e-4, 1e-1]
     'delay_update': rng.integers(10,100), # [10,100]
     'look_back': 4,
-    'memory_size': 1000,
+    'memory_size': 10000,
     'epsilon': 1,
     'batch_size': 100,
     'grad_clip': utils.round_any(10**(rng.random()*3-2), n=2) # [1e-2,10]
@@ -50,8 +51,9 @@ def main(config, trial_number):
   wandb.init(
     entity="yossathorn-t",
     project="torch-rl_dqn",
-    notes=f"trial#{trial_number} Train vanilla dqn on atari ALE/BeamRider-v5",
-    tags=["dqn", "vanilla", "atari", "BeamRider"],
+    # notes=f"trial#{trial_number} Train vanilla dqn on atari ALE/BeamRider-v5",
+    notes=f"Manual tuning. Train vanilla dqn on atari ALE/BeamRider-v5",
+    tags=["dqn", "vanilla", "atari", "BeamRider", "hand-tune"],
     config=config  
   )
   env = prep_env('ALE/BeamRider-v5')
@@ -66,14 +68,15 @@ def main(config, trial_number):
                     config['epsilon'], 
                     memory = ReplayMemory(config['memory_size']),
                     look_back = config['look_back'],
-                    eps_decay_rate=config['eps_decay_rate'], 
+                    eps_decay=config['eps_decay'], 
+                    eps_min=config['eps_min'],
                     learning_rate=config['learning_rate'],
                     delay_update=config['delay_update'],
                     grad_clip=config['grad_clip'])
 
   trainer = experiment.Trainer(env, onEpisodeSummary=onEpisodeSummary)
 
-  train_episodes = 100
+  train_episodes = 5000
   trainer.train(rng, 
                 agent, 
                 train_episodes, 
@@ -93,14 +96,15 @@ if __name__=='__main__':
 
   if trial_number == -1:
     config = {
-      'eps_decay_rate':1-3e-3, 
-      'learning_rate': 1e-2,
-      'delay_update': 50,
+      'eps_decay': 1000, 
+      'learning_rate': 1e-4,
+      'delay_update': 25,
       'look_back': 4,
-      'memory_size': 10000,
+      'memory_size': int(1e5),
       'epsilon': 1,
-      'batch_size': 100,
-      'grad_clip': 2.0
+      'eps_min': 0.1,
+      'batch_size': 128,
+      'grad_clip': 1e6
     }
   else:
     config = get_one_hparams(default_rng(trial_number))

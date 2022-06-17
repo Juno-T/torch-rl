@@ -48,7 +48,20 @@ class MLP(nn.Module):
     return self.head(x)
 
 class DQN_agent(Agent):
-  def __init__(self, env, model, epsilon, memory=None, look_back=1, eps_decay_rate=0.99, discount=0.9, learning_rate=0.1, delay_update=10, grad_clip=None):
+  """
+  Parameters:
+    env 
+    model
+    epsilon
+    memory
+    look_back
+    eps_decay: epoch that epsilon reach minimum
+    discount
+    learning_rate
+    delay_update
+    gradclip
+  """
+  def __init__(self, env, model, epsilon, memory=None, look_back=1, eps_decay=5e2, eps_min=0.1, discount=0.9, learning_rate=0.1, delay_update=10, grad_clip=None):
     self.env = env
     self.state_space = env.observation_space
     self.action_space = env.action_space
@@ -57,7 +70,8 @@ class DQN_agent(Agent):
     self.memory = memory
     self.model=model
     self.look_back = look_back
-    self.eps_decay_rate = eps_decay_rate
+    self.eps_decay = (epsilon-eps_min)/eps_decay
+    self.eps_min = eps_min
     self.discount=discount
     self.learning_rate=learning_rate
     self.delay_update = delay_update
@@ -74,16 +88,17 @@ class DQN_agent(Agent):
     self.target_model = deepcopy(self.replay_model).to(device)
     self.optimizer = optim.Adam(self.replay_model.parameters(), lr=self.learning_rate)
     self.episode_count = 0
-    self.epsilon = self.init_epsilon/self.eps_decay_rate # offset first episode
+    self.epsilon = self.init_epsilon+self.eps_decay #offset first episode
 
-  def episode_init(self, initial_observation):
-    self.episode_count+=1
-    self.epsilon *= self.eps_decay_rate
-    self.epsilon = max(self.epsilon, 0.1)
+  def episode_init(self, initial_observation, train=True):
+    if train:
+      self.episode_count+=1
+      self.epsilon -= self.eps_decay
+      self.epsilon = max(self.epsilon, self.eps_min)
+      if self.episode_count%self.delay_update==0:
+        self.target_model.load_state_dict(self.replay_model.state_dict())
     self.internal_s_t = None
     self.short_memory.reset(element = np.zeros_like(initial_observation))
-    if self.episode_count%self.delay_update==0:
-      self.target_model.load_state_dict(self.replay_model.state_dict())
     
   def act(self, rng):
     r = rng.uniform()
