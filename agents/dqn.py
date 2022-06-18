@@ -105,22 +105,22 @@ class DQN_agent(Agent):
     if r<self.epsilon:
       return int(rng.integers(self.action_space.n)), self.discount
     
-    # with torch.no_grad():
     self.replay_model.eval()
-    q_t = self.replay_model(torch.tensor(self.internal_s_t).float().unsqueeze(0).to(device)).detach()
+    with torch.no_grad():
+      q_t = self.replay_model(torch.tensor(self.internal_s_t).float().unsqueeze(0).to(device)).detach()
     return int(q_t.max(1).indices[0]), self.discount
 
   def eval_act(self, rng):
-    # with torch.no_grad():
     self.replay_model.eval()
-    q_t = self.replay_model(torch.tensor(self.internal_s_t).float().unsqueeze(0).to(device)).detach()
+    with torch.no_grad():
+      q_t = self.replay_model(torch.tensor(self.internal_s_t).float().unsqueeze(0).to(device)).detach()
     return int(q_t.max(1).indices[0]), self.discount
 
   
   def observe(self, action, timestep_t, remember=False):
     internal_s_tm1 = self.internal_s_t
 
-    self.internal_s_t = self._process_observation(timestep_t.obsv) # TODO:process this
+    self.internal_s_t = self._process_observation(timestep_t.obsv)
     if remember and internal_s_tm1 is not None: # Not the first observation
       self.memory.push(Transition(
         s_tm1=internal_s_tm1,
@@ -136,7 +136,7 @@ class DQN_agent(Agent):
   def get_stats(self):
     return {
       'epsilon': self.epsilon,
-      'loss': self.recent_loss
+      'loss': float(self.recent_loss)
     }
 
   def learn_batch_transitions(self, rng, batch_size):
@@ -152,19 +152,18 @@ class DQN_agent(Agent):
 
     prediction = self.replay_model(s_tm1).gather(dim=1, index=a_tm1.unsqueeze(0)).squeeze(0)
 
-    # with torch.no_grad():
-    q_t = self.target_model(s_t).detach()
+    with torch.no_grad():
+      q_t = self.target_model(s_t).detach()
     targets = v_q_learning_target(r_t, q_t, discount_t)
     loss = self.criterion(prediction, targets)
-    self.recent_loss= loss.item()
 
     self.optimizer.zero_grad()
-    loss.backward()
+    loss.backward(retain_graph=False)
     if self.grad_clip is not None:
       nn.utils.clip_grad_norm_(self.replay_model.parameters(), max_norm=self.grad_clip)
-    # for param in policy_net.parameters():
-    #     param.grad.data.clamp_(-1, 1)
     self.optimizer.step()
+
+    self.recent_loss=loss.detach().item()
     return 0
 
   def _process_observation(self, observation):

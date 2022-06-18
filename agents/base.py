@@ -13,7 +13,7 @@ class Agent(ABC):
 
 
   @abstractmethod
-  def episode_init(self, initial_observation):
+  def episode_init(self, initial_observation, train=True):
     pass
 
   @abstractmethod
@@ -47,7 +47,7 @@ class RandomAgent(Agent):
   def train_init(self, rng_key):
     pass
 
-  def episode_init(self, initial_observation):
+  def episode_init(self, initial_observation, train=True):
     pass
 
   def act(self, rng):
