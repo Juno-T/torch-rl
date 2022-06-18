@@ -20,6 +20,7 @@ class Trainer:
                 onEpisodeSummary = (lambda step, data: None)):
     self.env = env
     self.trained_ep = 0
+    self.trained_step = 0
     self.onEpisodeSummary = onEpisodeSummary
     
   def _reset(self):
@@ -28,20 +29,29 @@ class Trainer:
   def train(self, 
     rng, 
     agent: Agent,
-    train_episodes: int, 
+    train_steps: int, 
     batch_size: int=10, 
-    evaluate_every: int=2, 
+    evaluate_every: int=1000, 
     eval_episodes: int=1, 
     is_continue: bool=False, 
-    learn_from_transitions: bool=False):
+    learn_from_transitions: bool=False,
+    verbose: bool=True):
 
     if not is_continue:
       self._reset()
-      self.trained_ep=0
+      self.trained_step = 0
       agent.train_init(rng)
     train_summary={'max_val_reward': -1}
 
-    for episode_number in tqdm(range(self.trained_ep, self.trained_ep+train_episodes), bar_format='{l_bar}{bar:15}{r_bar}{bar:-15b}'):
+    # for episode_number in tqdm(range(self.trained_ep, self.trained_ep+train_episodes), bar_format='{l_bar}{bar:15}{r_bar}{bar:-15b}'):
+    if verbose:
+      pbar = tqdm(total=train_steps, bar_format='{l_bar}{bar:15}{r_bar}{bar:-15b}')
+    else:
+      pbar = None
+    episode_number=self.trained_ep
+    next_eval_step=self.trained_ep+evaluate_every
+    while True:
+      episode_number+=1
       episode_summary = {'train': {}, 'val':{}, 'agent': {}}
 
       observation = self.env.reset(seed=int(rng.integers(1e5)))
@@ -66,9 +76,15 @@ class Trainer:
         length+=1
         if learn_from_transitions:
           agent.learn_batch_transitions(rng, batch_size)
-      
-      if episode_number%evaluate_every==0:
-        val_summary = self.eval(rng, agent, eval_episodes, episode_number)
+        self.trained_step+=1
+        if self.trained_step>=train_steps:
+          break
+      if pbar:
+        pbar.update(self.trained_step - pbar.n) 
+      # if episode_number%evaluate_every==0:
+      if self.trained_step >= next_eval_step:
+        next_eval_step=self.trained_step+evaluate_every
+        val_summary = self.eval(rng, agent, eval_episodes)
         episode_summary['val'] = val_summary
         train_summary['max_val_reward']=max(episode_summary['val']['reward'],
                                             train_summary['max_val_reward'])
@@ -77,11 +93,14 @@ class Trainer:
       episode_summary['train']['ep_length']=length
       episode_summary['agent']=agent.get_stats()
       self.onEpisodeSummary(episode_number, episode_summary)
-    self.trained_ep += train_episodes
+      if self.trained_step>=train_steps:
+        break
+    if pbar:
+      pbar.close()
     return train_summary
       
 
-  def eval(self, rng, agent, eval_episodes, episode_number):
+  def eval(self, rng, agent, eval_episodes):
     for ep in range(eval_episodes):
       observation = self.env.reset(seed=int(rng.integers(1e5)))
       agent.episode_init(observation, train=False)

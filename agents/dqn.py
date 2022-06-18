@@ -61,7 +61,7 @@ class DQN_agent(Agent):
     delay_update
     gradclip
   """
-  def __init__(self, env, model, epsilon, memory=None, look_back=1, eps_decay=5e2, eps_min=0.1, discount=0.9, learning_rate=0.1, delay_update=10, grad_clip=None):
+  def __init__(self, env, model, epsilon, memory=None, look_back=1, eps_decay=5e2, eps_min=0.1, discount=0.9, learning_rate=0.1, delay_update=100, grad_clip=None):
     self.env = env
     self.state_space = env.observation_space
     self.action_space = env.action_space
@@ -79,6 +79,7 @@ class DQN_agent(Agent):
 
     self.criterion = nn.SmoothL1Loss()
     self.episode_count = 0
+    self.step_count=0
     self.internal_s_t = None
     self.short_memory = NP_deque(maxlen = look_back)
     self.recent_loss=0
@@ -93,10 +94,6 @@ class DQN_agent(Agent):
   def episode_init(self, initial_observation, train=True):
     if train:
       self.episode_count+=1
-      self.epsilon -= self.eps_decay
-      self.epsilon = max(self.epsilon, self.eps_min)
-      if self.episode_count%self.delay_update==0:
-        self.target_model.load_state_dict(self.replay_model.state_dict())
     self.internal_s_t = None
     self.short_memory.reset(element = np.zeros_like(initial_observation))
     
@@ -140,6 +137,11 @@ class DQN_agent(Agent):
     }
 
   def learn_batch_transitions(self, rng, batch_size):
+    self.step_count+=1
+    self.epsilon -= self.eps_decay
+    self.epsilon = max(self.epsilon, self.eps_min)
+    if self.step_count%self.delay_update==0:
+      self.target_model.load_state_dict(self.replay_model.state_dict())
     if self.memory.size<batch_size:
       return 0
     self.replay_model.train()

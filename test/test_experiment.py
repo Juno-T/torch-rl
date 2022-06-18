@@ -96,11 +96,11 @@ class TestReproducibility(unittest.TestCase):
     trainer1 = experiment.Trainer(self.env1, onEpisodeSummary=onEpisodeSummary1)
     trainer2 = experiment.Trainer(self.env2, onEpisodeSummary=onEpisodeSummary2)
 
-    train_episodes = 2
-    trainer1.train(default_rng(42), self.ab_agent1, train_episodes, batch_size=3, is_continue=False, learn_from_transitions=True)
-    trainer2.train(default_rng(42), self.ab_agent2, train_episodes, batch_size=3, is_continue=False, learn_from_transitions=True)
+    train_steps = 20
+    trainer1.train(default_rng(42), self.ab_agent1, train_steps, batch_size=3, is_continue=False, learn_from_transitions=True)
+    trainer2.train(default_rng(42), self.ab_agent2, train_steps, batch_size=3, is_continue=False, learn_from_transitions=True)
 
-    self.assertTrue(trainer1.trained_ep == trainer2.trained_ep)
+    self.assertTrue(trainer1.trained_step == trainer2.trained_step)
     # action1, timesteps1 = trainer1.acc.sample_one_ep(rng_key=key)
     # action2, timesteps2 = trainer2.acc.sample_one_ep(rng_key=key)
     # self.assertTrue(action1.shape==action2.shape)
@@ -136,8 +136,8 @@ class TestTrainClass():
   def test_train_RandomAgent(self):
     trainer = experiment.Trainer(self.cartpole, onEpisodeSummary=onEpisodeSummary)
 
-    train_episodes = 10
-    trainer.train(TestTrainClass.rng, self.cp_agent, train_episodes, batch_size=100, is_continue=False, learn_from_transitions=True)
+    train_steps = 100
+    trainer.train(TestTrainClass.rng, self.cp_agent, train_steps, batch_size=100, is_continue=False, learn_from_transitions=True)
     assert(1==1)
     
 

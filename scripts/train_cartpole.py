@@ -24,19 +24,6 @@ def prep_env(env_name):
   env = wrapper.Normalize(env, mean=np.array([0,0,0,0]), sd=np.array([2.4, 10, 0.42, 10]))
   return env
 
-# def get_one_hparams(rng):
-  # hparams = {
-  #   'eps_decay': 1-5e-3, 
-  #   'learning_rate': utils.round_any(10**(rng.random()*3-4), n=2), # [1e-4, 1e-1]
-  #   'delay_update': rng.integers(10,100), # [10,100]
-  #   'look_back': 4,
-  #   'memory_size': 1000,
-  #   'epsilon': 1,
-  #   'batch_size': 100,
-  #   'grad_clip': utils.round_any(10**(rng.random()*3-2), n=2) # [1e-2,10]
-  # }
-  # return hparams
-
 def main(config, trial_number):
   rng = default_rng(42) # control everything in the experiment
   torch.manual_seed(rng.integers(1e5))
@@ -64,12 +51,12 @@ def main(config, trial_number):
 
   trainer = experiment.Trainer(env, onEpisodeSummary=onEpisodeSummary)
 
-  train_episodes = 1000
+  train_steps = 10000
   trainer.train(rng, 
                 agent, 
-                train_episodes, 
+                train_steps, 
                 batch_size=config['batch_size'], 
-                evaluate_every=2, 
+                evaluate_every=1000, 
                 eval_episodes=1, 
                 is_continue=False, 
                 learn_from_transitions=True)
@@ -85,11 +72,11 @@ if __name__=='__main__':
   if trial_number == -1:
     config = {
       'learning_rate': 1e-4,
-      'delay_update': 10,
+      'delay_update': 200,
       'look_back': 1,
       'memory_size': int(1e4),
       'epsilon': 1,
-      'eps_decay': 100, 
+      'eps_decay': 10000, 
       'batch_size': 32,
       'grad_clip': 1.0
     }
