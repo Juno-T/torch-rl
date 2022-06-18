@@ -19,7 +19,7 @@ def prep_env(env_name):
   env = gym.make(env_name)
   env = sb3.common.atari_wrappers.AtariWrapper(env, 
                         noop_max=30, 
-                        frame_skip=1, 
+                        frame_skip=4, 
                         screen_size=84, 
                         terminal_on_life_loss=True, 
                         clip_reward=True) # (84,84,1)
@@ -50,8 +50,8 @@ def main(config, trial_number, track=True):
       entity="yossathorn-t",
       project="torch-rl_dqn",
       # notes=f"trial#{trial_number} Train vanilla dqn on atari ALE/Breakout-v5",
-      notes=f"Manual tuning. Train vanilla dqn on atari Breakout-v5",
-      tags=["dqn", "vanilla", "atari", "Breakout", "hand-tune"],
+      notes=f"Manual tuning. Train vanilla dqn on atari BreakoutNoFrameskip-v4",
+      tags=["dqn", "vanilla", "atari", "Breakout", "sb3-tune"],
       config=config  
     )
     def onEpisodeSummary(step, data):
@@ -60,7 +60,7 @@ def main(config, trial_number, track=True):
     onEpisodeSummary = (lambda *_, **__: 0)
     
   # env = prep_env('ALE/BeamRider-v5')
-  env = prep_env('ALE/Breakout-v5')
+  env = prep_env('BreakoutNoFrameskip-v4')
   # env = prep_env('PongDeterministic-v4')
 
   model = DQN_CNN(h=84, 
@@ -82,12 +82,12 @@ def main(config, trial_number, track=True):
 
   trainer = experiment.Trainer(env, onEpisodeSummary=onEpisodeSummary)
 
-  train_steps = int(5e6)
+  train_steps = int(1e6)
   train_summary = trainer.train(rng, 
                                 agent, 
                                 train_steps, 
                                 batch_size=config['batch_size'], 
-                                evaluate_every=10000, 
+                                evaluate_every=int(1e4), 
                                 eval_episodes=1, 
                                 is_continue=False, 
                                 learn_from_transitions=True,
@@ -101,20 +101,19 @@ if __name__=='__main__':
                       help='trial number')
   args = parser.parse_args()
   trial_number = int(args.trial_number)
-  print("cuda device count:", torch.cuda.device_count())
 
   if trial_number == -1:
     config = {
       'learning_rate': 1e-5,
-      'delay_update': 2000,
+      'delay_update': int(1e4),
       'look_back': 4,
       'memory_size': int(1e6),
       'epsilon': 1,
-      'eps_decay': int(1e6), 
-      'eps_min': 0.1,
+      'eps_decay': int(1e5), 
+      'eps_min': 0.05,
       'discount': 0.99,
-      'batch_size': 128,
-      'grad_clip': 1e6
+      'batch_size': 32,
+      'grad_clip': 10
     }
   else:
     config = get_one_hparams(default_rng(trial_number))

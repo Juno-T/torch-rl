@@ -15,9 +15,9 @@ class DQN_CNN(nn.Module):
   def __init__(self, h, w, in_channels, outputs):
     super(DQN_CNN, self).__init__()
     self.conv1 = nn.Conv2d(in_channels, 16, kernel_size=8, stride=4)
-    self.bn1 = nn.BatchNorm2d(16)
+    # self.bn1 = nn.BatchNorm2d(16)
     self.conv2 = nn.Conv2d(16, 32, kernel_size=4, stride=2)
-    self.bn2 = nn.BatchNorm2d(32)
+    # self.bn2 = nn.BatchNorm2d(32)
 
     def conv2d_size_out(size, kernel_size = 5, stride = 2):
         return (size - (kernel_size - 1) - 1) // stride  + 1
@@ -31,8 +31,8 @@ class DQN_CNN(nn.Module):
     )
 
   def forward(self, x):
-    x = F.relu(self.bn1(self.conv1(x)))
-    x = F.relu(self.bn2(self.conv2(x)))
+    x = F.relu(self.conv1(x))
+    x = F.relu(self.conv2(x))
     return self.head(x.view(x.size(0), -1))
 
 class MLP(nn.Module):

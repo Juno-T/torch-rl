@@ -79,10 +79,10 @@ class Trainer:
         self.trained_step+=1
         if self.trained_step>=train_steps:
           break
-      if pbar:
-        pbar.update(self.trained_step - pbar.n) 
       # if episode_number%evaluate_every==0:
       if self.trained_step >= next_eval_step:
+        if pbar:
+          pbar.update(self.trained_step - pbar.n) 
         next_eval_step=self.trained_step+evaluate_every
         val_summary = self.eval(rng, agent, eval_episodes)
         episode_summary['val'] = val_summary
@@ -101,6 +101,8 @@ class Trainer:
       
 
   def eval(self, rng, agent, eval_episodes):
+    summary['reward']=0
+    summary['ep_length']=0
     for ep in range(eval_episodes):
       observation = self.env.reset(seed=int(rng.integers(1e5)))
       agent.episode_init(observation, train=False)
@@ -123,7 +125,9 @@ class Trainer:
         agent.observe(action, timestep_t, remember = False)
         acc_reward += reward
         length+=1
-      summary['reward']=acc_reward
-      summary['ep_length']=length
+      summary['reward']+=acc_reward
+      summary['ep_length']+=length
 
+    summary['reward']/=eval_episodes
+    summary['ep_length']/=eval_episodes
     return summary
