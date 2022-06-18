@@ -15,10 +15,6 @@ from common.memory import ReplayMemory
 from common import wrapper, experiment, utils
 import argparse
 
-def onEpisodeSummary(step, data):
-  wandb.log(data=data, step=step)
-  # pass
-
 def prep_env(env_name):
   env = gym.make(env_name)
   env = sb3.common.atari_wrappers.AtariWrapper(env, 
@@ -32,31 +28,39 @@ def prep_env(env_name):
 
 def get_one_hparams(rng):
   hparams = {
-    'eps_decay': 500, 
-    'eps_min': 0.1,
     'learning_rate': utils.round_any(10**(rng.random()*3-4), n=2), # [1e-4, 1e-1]
     'delay_update': rng.integers(10,100), # [10,100]
     'look_back': 4,
-    'memory_size': 10000,
+    'memory_size': int(1e6),
     'epsilon': 1,
-    'batch_size': 100,
+    'eps_decay': 1000,
+    'eps_min': 0.1,
+    'discount': 0.99,
+    'batch_size': 128,
     'grad_clip': utils.round_any(10**(rng.random()*3-2), n=2) # [1e-2,10]
   }
   return hparams
 
-def main(config, trial_number):
+def main(config, trial_number, track=True):
   rng = default_rng(42) # control everything in the experiment
   torch.manual_seed(rng.integers(1e5))
 
-  wandb.init(
-    entity="yossathorn-t",
-    project="torch-rl_dqn",
-    # notes=f"trial#{trial_number} Train vanilla dqn on atari ALE/BeamRider-v5",
-    notes=f"Manual tuning. Train vanilla dqn on atari ALE/BeamRider-v5",
-    tags=["dqn", "vanilla", "atari", "BeamRider", "hand-tune"],
-    config=config  
-  )
-  env = prep_env('ALE/BeamRider-v5')
+  if track:
+    wandb.init(
+      entity="yossathorn-t",
+      project="torch-rl_dqn",
+      # notes=f"trial#{trial_number} Train vanilla dqn on atari ALE/Breakout-v5",
+      notes=f"Manual tuning. Train vanilla dqn on atari ALE/Breakout-v5",
+      tags=["dqn", "vanilla", "atari", "Breakout", "hand-tune"],
+      config=config  
+    )
+    def onEpisodeSummary(step, data):
+      wandb.log(data=data, step=step)
+  else:
+    onEpisodeSummary = (lambda *_, **__: 0)
+    
+  # env = prep_env('ALE/BeamRider-v5')
+  env = prep_env('ALE/Breakout-v5')
 
   model = DQN_CNN(h=84, 
                   w=84, 
@@ -70,6 +74,7 @@ def main(config, trial_number):
                     look_back = config['look_back'],
                     eps_decay=config['eps_decay'], 
                     eps_min=config['eps_min'],
+                    discount=config['discount'],
                     learning_rate=config['learning_rate'],
                     delay_update=config['delay_update'],
                     grad_clip=config['grad_clip'])
@@ -77,14 +82,16 @@ def main(config, trial_number):
   trainer = experiment.Trainer(env, onEpisodeSummary=onEpisodeSummary)
 
   train_episodes = 5000
-  trainer.train(rng, 
-                agent, 
-                train_episodes, 
-                batch_size=config['batch_size'], 
-                evaluate_every=2, 
-                eval_episodes=1, 
-                is_continue=False, 
-                learn_from_transitions=True)
+  train_summary = trainer.train(rng, 
+                                agent, 
+                                train_episodes, 
+                                batch_size=config['batch_size'], 
+                                evaluate_every=2, 
+                                eval_episodes=1, 
+                                is_continue=False, 
+                                learn_from_transitions=True)
+  if track:
+    wandb.log(train_summary)
 
 if __name__=='__main__':
   parser = argparse.ArgumentParser()
@@ -96,17 +103,18 @@ if __name__=='__main__':
 
   if trial_number == -1:
     config = {
-      'eps_decay': 1000, 
-      'learning_rate': 1e-4,
+      'learning_rate': 1e-5,
       'delay_update': 25,
       'look_back': 4,
-      'memory_size': int(1e5),
+      'memory_size': int(1e6),
       'epsilon': 1,
+      'eps_decay': 1000, 
       'eps_min': 0.1,
+      'discount': 0.99,
       'batch_size': 128,
-      'grad_clip': 1e6
+      'grad_clip': 1
     }
   else:
     config = get_one_hparams(default_rng(trial_number))
-  main(config, trial_number)
+  main(config, trial_number, track=True)
   

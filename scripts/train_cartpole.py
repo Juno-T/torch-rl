@@ -45,7 +45,7 @@ def main(config, trial_number):
     entity="yossathorn-t",
     project="torch-rl_cartpole",
     notes=f"Manual tuning",
-    tags=["dqn", "vanilla", "cartpole", "replicate"],
+    tags=["dqn", "vanilla", "cartpole"],
     config=config
   )
   env = prep_env('CartPole-v1')
@@ -64,7 +64,7 @@ def main(config, trial_number):
 
   trainer = experiment.Trainer(env, onEpisodeSummary=onEpisodeSummary)
 
-  train_episodes = 5000
+  train_episodes = 1000
   trainer.train(rng, 
                 agent, 
                 train_episodes, 
@@ -85,13 +85,13 @@ if __name__=='__main__':
   if trial_number == -1:
     config = {
       'learning_rate': 1e-4,
-      'delay_update': 25,
+      'delay_update': 10,
       'look_back': 1,
-      'memory_size': 1e6,
+      'memory_size': int(1e4),
       'epsilon': 1,
-      'eps_decay':, 
+      'eps_decay': 100, 
       'batch_size': 32,
-      'grad_clip': 1e6 # no clip
+      'grad_clip': 1.0
     }
   else:
     config = get_one_hparams(default_rng(trial_number))
