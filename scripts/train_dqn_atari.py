@@ -88,7 +88,7 @@ def main(config, trial_number, track=True):
                                 train_steps, 
                                 batch_size=config['batch_size'], 
                                 evaluate_every=int(1e4), 
-                                eval_episodes=1, 
+                                eval_episodes=3, 
                                 is_continue=False, 
                                 learn_from_transitions=True,
                                 verbose=True)
@@ -104,7 +104,7 @@ if __name__=='__main__':
 
   if trial_number == -1:
     config = {
-      'learning_rate': 1e-5,
+      'learning_rate': 1e-4,
       'delay_update': int(1e4),
       'look_back': 4,
       'memory_size': int(1e6),

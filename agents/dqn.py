@@ -104,13 +104,13 @@ class DQN_agent(Agent):
     
     self.replay_model.eval()
     with torch.no_grad():
-      q_t = self.replay_model(torch.tensor(self.internal_s_t).float().unsqueeze(0).to(device)).detach()
+      q_t = self.replay_model(torch.tensor(self.internal_s_t).float().unsqueeze(0).to(device))
     return int(q_t.max(1).indices[0]), self.discount
 
   def eval_act(self, rng):
     self.replay_model.eval()
     with torch.no_grad():
-      q_t = self.replay_model(torch.tensor(self.internal_s_t).float().unsqueeze(0).to(device)).detach()
+      q_t = self.replay_model(torch.tensor(self.internal_s_t).float().unsqueeze(0).to(device))
     return int(q_t.max(1).indices[0]), self.discount
 
   
@@ -155,8 +155,8 @@ class DQN_agent(Agent):
     prediction = self.replay_model(s_tm1).gather(dim=1, index=a_tm1.unsqueeze(0)).squeeze(0)
 
     with torch.no_grad():
-      q_t = self.target_model(s_t).detach()
-    targets = v_q_learning_target(r_t, q_t, discount_t)
+      q_t = self.target_model(s_t)
+      targets = v_q_learning_target(r_t, q_t, discount_t)
     loss = self.criterion(prediction, targets)
 
     self.optimizer.zero_grad()

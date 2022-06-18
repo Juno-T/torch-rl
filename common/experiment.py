@@ -101,6 +101,7 @@ class Trainer:
       
 
   def eval(self, rng, agent, eval_episodes):
+    summary={}
     summary['reward']=0
     summary['ep_length']=0
     for ep in range(eval_episodes):
@@ -109,7 +110,6 @@ class Trainer:
       timestep_t = TimeStep(obsv=observation)
       agent.observe(None, timestep_t, remember = False)
 
-      summary={}
       done=False
       acc_reward = 0
       length = 0
