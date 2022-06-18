@@ -39,6 +39,7 @@ class Trainer:
       self._reset()
       self.trained_ep=0
       agent.train_init(rng)
+    train_summary={'max_val_reward': -1}
 
     for episode_number in tqdm(range(self.trained_ep, self.trained_ep+train_episodes), bar_format='{l_bar}{bar:15}{r_bar}{bar:-15b}'):
       episode_summary = {'train': {}, 'val':{}, 'agent': {}}
@@ -69,12 +70,15 @@ class Trainer:
       if episode_number%evaluate_every==0:
         val_summary = self.eval(rng, agent, eval_episodes, episode_number)
         episode_summary['val'] = val_summary
+        train_summary['max_val_reward']=max(episode_summary['val']['reward'],
+                                            train_summary['max_val_reward'])
+
       episode_summary['train']['reward']=acc_reward
       episode_summary['train']['ep_length']=length
       episode_summary['agent']=agent.get_stats()
-
       self.onEpisodeSummary(episode_number, episode_summary)
     self.trained_ep += train_episodes
+    return train_summary
       
 
   def eval(self, rng, agent, eval_episodes, episode_number):
