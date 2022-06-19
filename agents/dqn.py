@@ -3,6 +3,7 @@ from torch import nn, optim
 import torch.nn.functional as F
 from copy import deepcopy
 import numpy as np
+from stable_baselines3.common.utils import polyak_update
 
 from agents.base import Agent
 from common.memory import ReplayMemory, Transition, NP_deque
@@ -141,6 +142,7 @@ class DQN_agent(Agent):
     self.epsilon -= self.eps_decay
     self.epsilon = max(self.epsilon, self.eps_min)
     if self.step_count%self.delay_update==0:
+      polyak_update(self.replay_model.parameters(), self.target_model.parameters(), tau=1.0) # sb3's low memory param copy
       self.target_model.load_state_dict(self.replay_model.state_dict())
     if self.memory.size<batch_size:
       return 0
@@ -165,7 +167,7 @@ class DQN_agent(Agent):
       nn.utils.clip_grad_norm_(self.replay_model.parameters(), max_norm=self.grad_clip)
     self.optimizer.step()
 
-    self.recent_loss=loss.detach().item()
+    self.recent_loss=float(loss.detach())
     return 0
 
   def _process_observation(self, observation):
