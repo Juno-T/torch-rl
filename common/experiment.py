@@ -50,9 +50,9 @@ class Trainer:
       pbar = None
     episode_number=self.trained_ep
     next_eval_step=self.trained_ep+evaluate_every
-    while True:
+    while self.trained_step<train_steps:
       episode_number+=1
-      episode_summary = {'train': {}, 'val':{}, 'agent': {}}
+      episode_summary = {'train': {}, 'val':{}, 'agent': {}, 'episode': episode_number}
 
       observation = self.env.reset(seed=int(rng.integers(1e5)))
       agent.episode_init(observation)
@@ -92,9 +92,7 @@ class Trainer:
       episode_summary['train']['reward']=acc_reward
       episode_summary['train']['ep_length']=length
       episode_summary['agent']=agent.get_stats()
-      self.onEpisodeSummary(episode_number, episode_summary)
-      if self.trained_step>=train_steps:
-        break
+      self.onEpisodeSummary(self.trained_step, episode_summary)
     if pbar:
       pbar.close()
     return train_summary
