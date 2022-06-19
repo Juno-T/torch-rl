@@ -3,6 +3,7 @@ from typing import NamedTuple, Any
 from copy import deepcopy
 
 import numpy as np
+from numpy.random import default_rng
 from tqdm import tqdm
 
 from common.memory import TimeStep
@@ -84,7 +85,7 @@ class Trainer:
         if pbar:
           pbar.update(self.trained_step - pbar.n) 
         next_eval_step=self.trained_step+evaluate_every
-        val_summary = self.eval(rng, agent, eval_episodes)
+        val_summary = self.eval(default_rng(int(rng.integers(0,1e6))), agent, eval_episodes)
         episode_summary['val'] = val_summary
         train_summary['max_val_reward']=max(episode_summary['val']['reward'],
                                             train_summary['max_val_reward'])
