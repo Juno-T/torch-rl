@@ -28,16 +28,16 @@ def prep_env(env_name):
 
 def get_one_hparams(rng):
   hparams = {
-    'learning_rate': utils.round_any(10**(rng.random()*3-4), n=2), # [1e-4, 1e-1]
-    'delay_update': rng.integers(500,5000), # [10,100]
+    'learning_rate': utils.round_any(10**(rng.random()*3-5), n=2), # [1e-5, 1e-2]
+    'delay_update': rng.integers(500,20000),
     'look_back': 4,
-    'memory_size': int(1e6),
+    'memory_size': int(1e5),
     'epsilon': 1,
-    'eps_decay': int(1e6),
+    'eps_decay': int(10**(rng.random()*1.5+4)), #[1e4, 3e5]
     'eps_min': 0.1,
     'discount': 0.99,
     'batch_size': 128,
-    'grad_clip': utils.round_any(10**(rng.random()*3-2), n=2) # [1e-2,10]
+    'grad_clip': utils.round_any(10**(rng.random()*3-1), n=2) # [1e-1,100]
   }
   return hparams
 
@@ -51,7 +51,7 @@ def main(config, trial_number, track=True):
       project="torch-rl_dqn",
       # notes=f"trial#{trial_number} Train vanilla dqn on atari ALE/Breakout-v5",
       notes=f"Manual tuning. Train vanilla dqn on atari BreakoutNoFrameskip-v4",
-      tags=["dqn", "vanilla", "atari", "Breakout", "sb3-tune"],
+      tags=["dqn", "vanilla", "atari", "Breakout", "hand-tune"],
       config=config  
     )
     def onEpisodeSummary(step, data):
@@ -104,12 +104,12 @@ if __name__=='__main__':
 
   if trial_number == -1:
     config = {
-      'learning_rate': 1e-4,
+      'learning_rate': 3e-5,
       'delay_update': int(1e4),
       'look_back': 4,
-      'memory_size': int(1e6),
+      'memory_size': int(1e5), # 1e6 is prolly to much
       'epsilon': 1,
-      'eps_decay': int(1e5), 
+      'eps_decay': int(2e5), 
       'eps_min': 0.05,
       'discount': 0.99,
       'batch_size': 32,
@@ -117,5 +117,5 @@ if __name__=='__main__':
     }
   else:
     config = get_one_hparams(default_rng(trial_number))
-  main(config, trial_number, track=True)
+  main(config, trial_number, track=False)
   

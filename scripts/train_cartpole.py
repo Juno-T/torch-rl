@@ -24,17 +24,35 @@ def prep_env(env_name):
   env = wrapper.Normalize(env, mean=np.array([0,0,0,0]), sd=np.array([2.4, 10, 0.42, 10]))
   return env
 
-def main(config, trial_number):
+def get_one_hparams(rng):
+  hparams = {
+    'learning_rate': utils.round_any(10**(rng.random()*3-5), n=2), # [1e-5, 1e-2]
+    'delay_update': rng.integers(500,20000),
+    'look_back': 1,
+    'memory_size': int(1e5),
+    'epsilon': 1,
+    'eps_decay': int(10**(rng.random()*1.5+4)), #[1e4, 3e5]
+    'eps_min': 0.1,
+    'discount': 0.99,
+    'batch_size': 128,
+    'grad_clip': utils.round_any(10**(rng.random()*3-1), n=2) # [1e-1,100]
+  }
+  return hparams
+
+def main(config=None):
+  # If called by wandb.agent, as below,
+  # this config will be set by Sweep Controller
   rng = default_rng(42) # control everything in the experiment
   torch.manual_seed(rng.integers(1e5))
 
   wandb.init(
     entity="yossathorn-t",
     project="torch-rl_cartpole",
-    notes=f"Manual tuning",
-    tags=["dqn", "vanilla", "cartpole"],
+    notes=f"Test sweep",
+    tags=["dqn", "vanilla", "cartpole", "sweep"],
     config=config
   )
+  config=wandb.config
   env = prep_env('CartPole-v1')
 
   model = MLP(inputs = 4, outputs = env.action_space.n)
@@ -52,21 +70,25 @@ def main(config, trial_number):
   trainer = experiment.Trainer(env, onEpisodeSummary=onEpisodeSummary)
 
   train_steps = 10000
-  trainer.train(rng, 
-                agent, 
-                train_steps, 
-                batch_size=config['batch_size'], 
-                evaluate_every=1000, 
-                eval_episodes=1, 
-                is_continue=False, 
-                learn_from_transitions=True)
+  train_summary = trainer.train(rng, 
+                                agent, 
+                                train_steps, 
+                                batch_size=config['batch_size'], 
+                                evaluate_every=1000, 
+                                eval_episodes=3, 
+                                is_continue=False, 
+                                learn_from_transitions=True)
+  wandb.log(train_summary)
 
 if __name__=='__main__':
   parser = argparse.ArgumentParser()
   parser.add_argument('--trial-number', type=int, default=-1,
                       help='trial number')
+  parser.add_argument('--sweep-id', type=str, default="",
+                      help='sweep id. If exist, supersede the trial number')
   args = parser.parse_args()
   trial_number = int(args.trial_number)
+  sweep_id = str(args.sweep_id)
   print("cuda device count:", torch.cuda.device_count())
 
   if trial_number == -1:
@@ -76,11 +98,19 @@ if __name__=='__main__':
       'look_back': 1,
       'memory_size': int(1e4),
       'epsilon': 1,
-      'eps_decay': 10000, 
+      'eps_decay': 5000, 
       'batch_size': 32,
       'grad_clip': 1.0
     }
   else:
     config = get_one_hparams(default_rng(trial_number))
-  main(config, trial_number)
+  
+  if sweep_id!="":
+    wandb.agent(sweep_id, 
+      function=main, 
+      entity="yossathorn-t",
+      project="torch-rl_cartpole",
+      count=1)
+  else:
+    main(config)
   
