@@ -117,5 +117,5 @@ if __name__=='__main__':
     }
   else:
     config = get_one_hparams(default_rng(trial_number))
-  main(config, trial_number, track=False)
+  main(config, trial_number, track=True)
   

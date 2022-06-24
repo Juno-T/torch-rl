@@ -5,7 +5,7 @@ import numpy as np
 import random
 
 class TimeStep(NamedTuple):
-  step_type: int = 0  # is terminal step
+  done: int = 0  # is terminal step
   obsv: Any = None
   reward: float = 0.0
   discount: float = 1.0
@@ -16,6 +16,7 @@ class Transition(NamedTuple):
   s_t: Any
   r_t: float = 0.0
   discount_t: float = 0.9
+  done: int = 0
   trace: Any = None # For future implementation of traces?
   priority: float =1 # For future priority sampling implementation
 

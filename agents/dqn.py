@@ -125,6 +125,7 @@ class DQN_agent(Agent):
         a_tm1=action,
         r_t=timestep_t.reward,
         s_t=self.internal_s_t,
+        done=int(timestep_t.done),
         discount_t=timestep_t.discount
       ))
 
@@ -153,12 +154,14 @@ class DQN_agent(Agent):
     s_t = torch.from_numpy(transitions.s_t).float().to(device)
     r_t = torch.from_numpy(transitions.r_t).float().to(device)
     discount_t = torch.from_numpy(transitions.discount_t).float().to(device)
-
+    done = torch.from_numpy(transitions.done).float().to(device)
     prediction = self.replay_model(s_tm1).gather(dim=1, index=a_tm1.unsqueeze(0)).squeeze(0)
 
     with torch.no_grad():
       q_t = self.target_model(s_t)
-      targets = v_q_learning_target(r_t, q_t, discount_t)
+      q_t_masked = q_t*(1-done).view(-1,1).detach()
+      targets = v_q_learning_target(r_t, q_t_masked, discount_t)
+    # print(targets.requires_grad)
     loss = self.criterion(prediction, targets)
 
     self.optimizer.zero_grad()
