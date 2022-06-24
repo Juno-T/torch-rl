@@ -97,8 +97,8 @@ class TestReproducibility(unittest.TestCase):
     trainer2 = experiment.Trainer(self.env2, onEpisodeSummary=onEpisodeSummary2)
 
     train_steps = 20
-    trainer1.train(default_rng(42), self.ab_agent1, train_steps, batch_size=3, is_continue=False, learn_from_transitions=True)
-    trainer2.train(default_rng(42), self.ab_agent2, train_steps, batch_size=3, is_continue=False, learn_from_transitions=True)
+    trainer1.train(default_rng(42), self.ab_agent1, train_steps, batch_size=3, evaluate_every=10, is_continue=False, learn_from_transitions=True)
+    trainer2.train(default_rng(42), self.ab_agent2, train_steps, batch_size=3, evaluate_every=10, is_continue=False, learn_from_transitions=True)
 
     self.assertTrue(trainer1.trained_step == trainer2.trained_step)
     # action1, timesteps1 = trainer1.acc.sample_one_ep(rng_key=key)
