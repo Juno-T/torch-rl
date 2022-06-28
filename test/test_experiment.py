@@ -100,7 +100,7 @@ class TestReproducibility(unittest.TestCase):
     trainer1.train(default_rng(42), self.ab_agent1, train_steps, batch_size=3, evaluate_every=10, is_continue=False, learn_from_transitions=True)
     trainer2.train(default_rng(42), self.ab_agent2, train_steps, batch_size=3, evaluate_every=10, is_continue=False, learn_from_transitions=True)
 
-    self.assertTrue(trainer1.trained_step == trainer2.trained_step)
+    self.assertTrue(self.ab_agent1.trained_step == self.ab_agent2.trained_step)
     # action1, timesteps1 = trainer1.acc.sample_one_ep(rng_key=key)
     # action2, timesteps2 = trainer2.acc.sample_one_ep(rng_key=key)
     # self.assertTrue(action1.shape==action2.shape)

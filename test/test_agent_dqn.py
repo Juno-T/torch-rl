@@ -123,23 +123,23 @@ class TestFunctionality(unittest.TestCase):
     return super().setUpClass()
 
   def setUp(self) -> None:
-    config = {
+    self.config = {
       'eps_decay':100, 
       'learning_rate': .01,
       'delay_update':100
     }
     torch.manual_seed(0)
-    model = MLP(inputs = 4, outputs= TestFunctionality.env.action_space.n)
-    epsilon = 1
+    self.model = MLP(inputs = 4, outputs= TestFunctionality.env.action_space.n)
+    self.epsilon = 1
     self.look_back = 2
     self.cp_agent = DQN_agent(TestFunctionality.env, 
-                      model, 
-                      epsilon, 
+                      self.model, 
+                      self.epsilon, 
                       memory = ReplayMemory(100),
                       look_back = self.look_back,
-                      eps_decay=config['eps_decay'], 
-                      learning_rate=config['learning_rate'],
-                      delay_update=config['delay_update'])
+                      eps_decay=self.config['eps_decay'], 
+                      learning_rate=self.config['learning_rate'],
+                      delay_update=self.config['delay_update'])
     return super().setUp()
 
   def test_det0(self):
@@ -163,7 +163,27 @@ class TestFunctionality(unittest.TestCase):
     # print(self.cp_agent.memory.sample(TestFunctionality.rng, 1))
     self.assertTrue(self.cp_agent.memory.sample(TestFunctionality.rng, 10).s_tm1.shape==(10, self.look_back*2, 3))
 
-    # test multiple episode
+  def test_save_load(self):
+    save_path = 'temp_agent_ckp.pt'
+    self.cp_agent.train_init(TestFunctionality.rng)
+    self.cp_agent.epsilon = 0.5
+    self.cp_agent.trained_step = 100
+    self.cp_agent.save(save_path)
+    new_agent = DQN_agent(TestFunctionality.env, 
+                      self.model, 
+                      self.epsilon, 
+                      memory = ReplayMemory(100),
+                      look_back = self.look_back,
+                      eps_decay=self.config['eps_decay'], 
+                      learning_rate=self.config['learning_rate'],
+                      delay_update=self.config['delay_update'])
+    new_agent.load(save_path)
+    assert(new_agent.trained_step == self.cp_agent.trained_step)
+    assert(new_agent.epsilon == self.cp_agent.epsilon)
+
+    if os.path.exists(save_path):
+      os.remove(save_path)
+
 
 class TestModels(unittest.TestCase):
   def test_DQN_CNN_forward(self):

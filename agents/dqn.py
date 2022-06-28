@@ -80,7 +80,7 @@ class DQN_agent(Agent):
 
     self.criterion = nn.SmoothL1Loss()
     self.episode_count = 0
-    self.step_count=0
+    self.trained_step=0
     self.internal_s_t = None
     self.short_memory = NP_deque(maxlen = look_back)
     self.recent_loss=0
@@ -139,14 +139,15 @@ class DQN_agent(Agent):
     }
 
   def learn_batch_transitions(self, rng, batch_size):
-    self.step_count+=1
-    self.epsilon -= self.eps_decay
-    self.epsilon = max(self.epsilon, self.eps_min)
-    if self.step_count%self.delay_update==0:
-      polyak_update(self.replay_model.parameters(), self.target_model.parameters(), tau=1.0) # sb3's low memory param copy
-      self.target_model.load_state_dict(self.replay_model.state_dict())
     if self.memory.size<batch_size:
       return 0
+    self.trained_step+=1
+    self.epsilon -= self.eps_decay
+    self.epsilon = max(self.epsilon, self.eps_min)
+    if self.trained_step%self.delay_update==0:
+      polyak_update(self.replay_model.parameters(), self.target_model.parameters(), tau=1.0) # sb3's low memory param copy
+      self.target_model.load_state_dict(self.replay_model.state_dict())
+    
     self.replay_model.train()
     transitions = self.memory.sample(rng, batch_size)
     s_tm1 = torch.from_numpy(transitions.s_tm1).float().to(device)
@@ -179,3 +180,32 @@ class DQN_agent(Agent):
     # return np.vstack(p) # squash first two dim
     return np.vstack(p).reshape((-1,*p.shape[2:])) # faster
 
+  def save(self, path):
+    torch.save({
+      'episode_count': self.episode_count,
+      'trained_step': self.trained_step,
+      'recent_loss': self.recent_loss,
+      'epsilon': self.epsilon,
+
+      'replay_model': self.replay_model.state_dict(),
+      'target_model': self.target_model.state_dict(),
+      'optimizer': self.optimizer.state_dict(),
+    }, path)
+    return 0
+
+  def load(self, path):
+    checkpoint = torch.load(path)
+    self.episode_count = checkpoint['episode_count']
+    self.trained_step = checkpoint['trained_step']
+    self.recent_loss = checkpoint['recent_loss']
+    self.epsilon = checkpoint['epsilon']
+
+
+    self.replay_model = deepcopy(self.model).to(device)
+    self.target_model = deepcopy(self.replay_model).to(device)
+    self.optimizer = optim.Adam(self.replay_model.parameters(), lr=self.learning_rate)
+    
+    self.replay_model.load_state_dict(checkpoint['replay_model'])
+    self.target_model.load_state_dict(checkpoint['target_model'])
+    self.optimizer.load_state_dict(checkpoint['optimizer'])
+    return 0

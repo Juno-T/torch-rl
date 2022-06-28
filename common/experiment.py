@@ -21,7 +21,6 @@ class Trainer:
                 onEpisodeSummary = (lambda step, data: None)):
     self.env = env
     self.trained_ep = 0
-    self.trained_step = 0
     self.onEpisodeSummary = onEpisodeSummary
     
   def _reset(self):
@@ -33,14 +32,13 @@ class Trainer:
     train_steps: int, 
     batch_size: int=10, 
     evaluate_every: int=1000, 
+    freeze_play: int=1000, # initial steps to collect memory without learning
     eval_episodes: int=1, 
-    is_continue: bool=False, 
-    learn_from_transitions: bool=False,
+    is_continue: bool=False,
     verbose: bool=True):
 
     if not is_continue:
       self._reset()
-      self.trained_step = 0
       agent.train_init(rng)
     train_summary={'max_val_reward': -1}
 
@@ -49,9 +47,8 @@ class Trainer:
       pbar = tqdm(total=train_steps, bar_format='{l_bar}{bar:15}{r_bar}{bar:-15b}')
     else:
       pbar = None
-    episode_number=self.trained_ep
-    next_eval_step=self.trained_ep+evaluate_every
-    while self.trained_step<train_steps:
+    next_eval_step=agent.trained_step+evaluate_every
+    while agent.trained_step<train_steps:
       episode_number+=1
       episode_summary = {'train': {}, 'val':{}, 'agent': {}, 'episode': episode_number}
 
@@ -75,25 +72,26 @@ class Trainer:
         agent.observe(action, timestep_t, remember = True)
         acc_reward += reward
         length+=1
-        if learn_from_transitions:
+        if freeze_play<=0:
           agent.learn_batch_transitions(rng, batch_size)
-        self.trained_step+=1
-        if self.trained_step>=train_steps:
+        freeze_play-=1
+        if agent.trained_step>=train_steps:
           break
-      # if episode_number%evaluate_every==0:
-      if self.trained_step >= next_eval_step:
+
+      if agent.trained_step >= next_eval_step:
         if pbar:
-          pbar.update(self.trained_step - pbar.n) 
-        next_eval_step=self.trained_step+evaluate_every
+          pbar.update(agent.trained_step - pbar.n) 
+        next_eval_step=agent.trained_step+evaluate_every
         val_summary = self.eval(default_rng(int(rng.integers(0,1e6))), agent, eval_episodes)
         episode_summary['val'] = val_summary
         train_summary['max_val_reward']=max(episode_summary['val']['reward'],
                                             train_summary['max_val_reward'])
 
-      episode_summary['train']['reward']=acc_reward
-      episode_summary['train']['ep_length']=length
-      episode_summary['agent']=agent.get_stats()
-      self.onEpisodeSummary(self.trained_step, episode_summary)
+      if freeze_play<0:
+        episode_summary['train']['reward']=acc_reward
+        episode_summary['train']['ep_length']=length
+        episode_summary['agent']=agent.get_stats()
+        self.onEpisodeSummary(agent.trained_step, episode_summary)
     if pbar:
       pbar.close()
     return train_summary
