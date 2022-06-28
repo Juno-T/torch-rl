@@ -89,7 +89,7 @@ class Trainer:
         train_summary['max_val_reward']=max(episode_summary['val']['reward'],
                                             train_summary['max_val_reward'])
 
-      if freeze_play<0:
+      if freeze_play<=0:
         episode_summary['train']['reward']=acc_reward
         episode_summary['train']['ep_length']=length
         episode_summary['agent']=agent.get_stats()
