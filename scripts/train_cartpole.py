@@ -15,6 +15,8 @@ from common.memory import ReplayMemory
 from common import wrapper, experiment, utils
 import argparse
 
+run_id="test-resume-trial2"
+
 def onEpisodeSummary(step, data):
   wandb.log(data=data, step=step)
   # pass
@@ -46,6 +48,8 @@ def main(config=None):
   torch.manual_seed(rng.integers(1e5))
 
   wandb.init(
+    id=run_id,
+    resume="allow",
     entity="yossathorn-t",
     project="torch-rl_cartpole",
     notes=f"Test sweep",
@@ -53,6 +57,7 @@ def main(config=None):
     config=config
   )
   config=wandb.config
+  ckp_name = "agent_ckp.pt"
   env = prep_env('CartPole-v1')
 
   model = MLP(inputs = 4, outputs = env.action_space.n)
@@ -66,6 +71,10 @@ def main(config=None):
                     learning_rate=config['learning_rate'],
                     delay_update=config['delay_update'],
                     grad_clip=config['grad_clip'])
+  
+  if wandb.run.resumed:
+    ckp_file = wandb.restore(ckp_name)
+    agent.load(ckp_file.name)
 
   trainer = experiment.Trainer(env, onEpisodeSummary=onEpisodeSummary)
 
@@ -76,9 +85,10 @@ def main(config=None):
                                 batch_size=config['batch_size'], 
                                 evaluate_every=1000, 
                                 eval_episodes=3, 
-                                is_continue=False, 
-                                learn_from_transitions=True)
+                                freeze_play=1000,
+                                is_continue=wandb.run.resumed)
   wandb.log(train_summary)
+  agent.save(os.path.join(wandb.run.dir, ckp_name))
 
 if __name__=='__main__':
   parser = argparse.ArgumentParser()

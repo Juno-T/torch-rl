@@ -40,17 +40,18 @@ class Trainer:
     if not is_continue:
       self._reset()
       agent.train_init(rng)
+    total_steps = train_steps+agent.trained_step
     train_summary={'max_val_reward': -1}
 
-    # for episode_number in tqdm(range(self.trained_ep, self.trained_ep+train_episodes), bar_format='{l_bar}{bar:15}{r_bar}{bar:-15b}'):
     if verbose:
-      pbar = tqdm(total=train_steps, bar_format='{l_bar}{bar:15}{r_bar}{bar:-15b}')
+      pbar = tqdm(total=total_steps, bar_format='{l_bar}{bar:15}{r_bar}{bar:-15b}')
+      pbar.update(agent.trained_step - pbar.n) 
     else:
       pbar = None
     next_eval_step=agent.trained_step+evaluate_every
-    while agent.trained_step<train_steps:
-      episode_number+=1
-      episode_summary = {'train': {}, 'val':{}, 'agent': {}, 'episode': episode_number}
+    while agent.trained_step<total_steps:
+      agent.episode_count+=1
+      episode_summary = {'train': {}, 'val':{}, 'agent': {}, 'episode': agent.episode_count}
 
       observation = self.env.reset(seed=int(rng.integers(1e5)))
       agent.episode_init(observation)
@@ -75,7 +76,7 @@ class Trainer:
         if freeze_play<=0:
           agent.learn_batch_transitions(rng, batch_size)
         freeze_play-=1
-        if agent.trained_step>=train_steps:
+        if agent.trained_step>=total_steps:
           break
 
       if agent.trained_step >= next_eval_step:
