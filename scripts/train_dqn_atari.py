@@ -15,6 +15,11 @@ from common.memory import ReplayMemory
 from common import wrapper, experiment, utils
 import argparse
 
+TRACK=True
+SAVE_CHECKPOINT=True
+run_id="long-training-trial4"
+ckp_name = "agent_ckp.pt"
+
 def prep_env(env_name):
   env = gym.make(env_name)
   env = sb3.common.atari_wrappers.AtariWrapper(env, 
@@ -41,15 +46,16 @@ def get_one_hparams(rng):
   }
   return hparams
 
-def main(config, trial_number, track=True):
+def main(config):
   rng = default_rng(42) # control everything in the experiment
   torch.manual_seed(rng.integers(1e5))
 
-  if track:
+  if TRACK:
     wandb.init(
+      id=run_id,
+      resume="allow",
       entity="yossathorn-t",
       project="torch-rl_dqn",
-      # notes=f"trial#{trial_number} Train vanilla dqn on atari ALE/Breakout-v5",
       notes=f"Manual tuning. Train vanilla dqn on atari BreakoutNoFrameskip-v4",
       tags=["dqn", "vanilla", "atari", "Breakout", "hand-tune"],
       config=config  
@@ -80,6 +86,18 @@ def main(config, trial_number, track=True):
                     delay_update=config['delay_update'],
                     grad_clip=config['grad_clip'])
 
+  resume=False
+  if TRACK:
+    if wandb.run.resumed:
+      try:
+        ckp_file = wandb.restore(ckp_name)
+        print("Checkpoint found! Loading checkpoint...")
+        agent.load(ckp_file.name)
+        resume=True
+      except:
+        print("No checkpoint stored or checkpoint couldn't loaded by agent")
+        resume=False
+
   trainer = experiment.Trainer(env, onEpisodeSummary=onEpisodeSummary)
 
   train_steps = int(1e6)
@@ -89,11 +107,13 @@ def main(config, trial_number, track=True):
                                 batch_size=config['batch_size'], 
                                 evaluate_every=int(1e4), 
                                 eval_episodes=3, 
-                                is_continue=False, 
-                                learn_from_transitions=True,
+                                freeze_play=int(1e4),
+                                is_continue=resume,
                                 verbose=True)
-  if track:
+  if TRACK:
     wandb.log(train_summary)
+    if resume or SAVE_CHECKPOINT:
+      agent.save(os.path.join(wandb.run.dir, ckp_name))
 
 if __name__=='__main__':
   parser = argparse.ArgumentParser()
@@ -109,7 +129,7 @@ if __name__=='__main__':
       'look_back': 4,
       'memory_size': int(1e5), # 1e6 is prolly to much
       'epsilon': 1,
-      'eps_decay': int(2e5), 
+      'eps_decay': int(1e6), 
       'eps_min': 0.05,
       'discount': 0.99,
       'batch_size': 32,
@@ -117,5 +137,5 @@ if __name__=='__main__':
     }
   else:
     config = get_one_hparams(default_rng(trial_number))
-  main(config, trial_number, track=True)
+  main(config)
   

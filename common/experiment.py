@@ -75,7 +75,8 @@ class Trainer:
         length+=1
         if freeze_play<=0:
           agent.learn_batch_transitions(rng, batch_size)
-        freeze_play-=1
+        else:
+          freeze_play-=1
         if agent.trained_step>=total_steps:
           break
 

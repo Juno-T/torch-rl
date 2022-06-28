@@ -105,14 +105,19 @@ class DQN_agent(Agent):
     
     self.replay_model.eval()
     with torch.no_grad():
-      q_t = self.replay_model(torch.tensor(self.internal_s_t).float().unsqueeze(0).to(device))
-    return int(q_t.max(1).indices[0]), self.discount
+      s_t = torch.tensor(self.internal_s_t).float().unsqueeze(0).to(device)
+      q_t = self.replay_model(s_t)
+      action = q_t.max(1).indices[0].detach()
+    del s_t, q_t
+    return int(action), self.discount
 
   def eval_act(self, rng):
     self.replay_model.eval()
     with torch.no_grad():
-      q_t = self.replay_model(torch.tensor(self.internal_s_t).float().unsqueeze(0).to(device))
-    return int(q_t.max(1).indices[0]), self.discount
+      s_t = torch.tensor(self.internal_s_t).float().unsqueeze(0).to(device)
+      q_t = self.replay_model(s_t)
+      action = q_t.max(1).indices[0].detach()
+    return int(action), self.discount
 
   
   def observe(self, action, timestep_t, remember=False):
